@@ -1,41 +1,23 @@
-import Component from 'vue-class-component';
-import { Vue, Inject } from 'vue-property-decorator';
-import LoginService from '@/account/login.service';
-import ActivateService from './activate.service';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { mergeMap } from 'rxjs/operators';
 
-@Component
-export default class Activate extends Vue {
-  @Inject('activateService')
-  private activateService: () => ActivateService;
-  @Inject('loginService')
-  private loginService: () => LoginService;
-  success = false;
+import { ActivateService } from './activate.service';
+
+@Component({
+  selector: 'jhi-activate',
+  templateUrl: './activate.component.html',
+})
+export class ActivateComponent implements OnInit {
   error = false;
+  success = false;
 
-  beforeRouteEnter(to, from, next) {
-    next(vm => {
-      if (to.query.key) {
-        vm.init(to.query.key);
-      }
+  constructor(private activateService: ActivateService, private route: ActivatedRoute) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.pipe(mergeMap(params => this.activateService.get(params.key))).subscribe({
+      next: () => (this.success = true),
+      error: () => (this.error = true),
     });
-  }
-
-  public init(key: string): void {
-    this.activateService()
-      .activateAccount(key)
-      .then(
-        () => {
-          this.success = true;
-          this.error = false;
-        },
-        () => {
-          this.error = true;
-          this.success = false;
-        }
-      );
-  }
-
-  public openLogin(): void {
-    this.loginService().openLogin((<any>this).$root);
   }
 }

@@ -1,82 +1,73 @@
-import Vue from 'vue';
-import { Component, Inject } from 'vue-property-decorator';
-import { email, helpers, maxLength, minLength, required, sameAs } from 'vuelidate/lib/validators';
-import LoginService from '@/account/login.service';
-import RegisterService from '@/account/register/register.service';
-import { EMAIL_ALREADY_USED_TYPE, LOGIN_ALREADY_USED_TYPE } from '@/constants';
+import { Component, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { FormBuilder, Validators } from '@angular/forms';
+import { TranslateService } from '@ngx-translate/core';
 
-const loginPattern = helpers.regex('alpha', /^[a-zA-Z0-9!$&*+=?^_`{|}~.-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$|^[_.@A-Za-z0-9-]+$/);
-const validations: any = {
-  registerAccount: {
-    login: {
-      required,
-      minLength: minLength(1),
-      maxLength: maxLength(50),
-      pattern: loginPattern,
-    },
-    email: {
-      required,
-      minLength: minLength(5),
-      maxLength: maxLength(254),
-      email,
-    },
-    password: {
-      required,
-      minLength: minLength(4),
-      maxLength: maxLength(254),
-    },
-  },
-  confirmPassword: {
-    required,
-    minLength: minLength(4),
-    maxLength: maxLength(50),
-    // prettier-ignore
-    sameAsPassword: sameAs(function() {
-      return this.registerAccount.password;
-    }),
-  },
-};
+import { EMAIL_ALREADY_USED_TYPE, LOGIN_ALREADY_USED_TYPE } from 'app/config/error.constants';
+import { RegisterService } from './register.service';
 
 @Component({
-  validations,
+  selector: 'jhi-register',
+  templateUrl: './register.component.html',
 })
-export default class Register extends Vue {
-  @Inject('registerService') private registerService: () => RegisterService;
-  @Inject('loginService') private loginService: () => LoginService;
-  public registerAccount: any = {
-    login: undefined,
-    email: undefined,
-    password: undefined,
-  };
-  public confirmPassword: any = null;
-  public error = '';
-  public errorEmailExists = '';
-  public errorUserExists = '';
-  public success = false;
+export class RegisterComponent implements AfterViewInit {
+  @ViewChild('login', { static: false })
+  login?: ElementRef;
 
-  public register(): void {
-    this.error = null;
-    this.errorUserExists = null;
-    this.errorEmailExists = null;
-    this.registerAccount.langKey = this.$store.getters.currentLanguage;
-    this.registerService()
-      .processRegistration(this.registerAccount)
-      .then(() => {
-        this.success = true;
-      })
-      .catch(error => {
-        this.success = null;
-        if (error.response.status === 400 && error.response.data.type === LOGIN_ALREADY_USED_TYPE) {
-          this.errorUserExists = 'ERROR';
-        } else if (error.response.status === 400 && error.response.data.type === EMAIL_ALREADY_USED_TYPE) {
-          this.errorEmailExists = 'ERROR';
-        } else {
-          this.error = 'ERROR';
-        }
-      });
+  doNotMatch = false;
+  error = false;
+  errorEmailExists = false;
+  errorUserExists = false;
+  success = false;
+
+  registerForm = this.fb.group({
+    login: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(1),
+        Validators.maxLength(50),
+        Validators.pattern('^[a-zA-Z0-9!$&*+=?^_`{|}~.-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$|^[_.@A-Za-z0-9-]+$'),
+      ],
+    ],
+    email: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(254), Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(50)]],
+    confirmPassword: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(50)]],
+  });
+
+  constructor(private translateService: TranslateService, private registerService: RegisterService, private fb: FormBuilder) {}
+
+  ngAfterViewInit(): void {
+    if (this.login) {
+      this.login.nativeElement.focus();
+    }
   }
 
-  public openLogin(): void {
-    this.loginService().openLogin((<any>this).$root);
+  register(): void {
+    this.doNotMatch = false;
+    this.error = false;
+    this.errorEmailExists = false;
+    this.errorUserExists = false;
+
+    const password = this.registerForm.get(['password'])!.value;
+    if (password !== this.registerForm.get(['confirmPassword'])!.value) {
+      this.doNotMatch = true;
+    } else {
+      const login = this.registerForm.get(['login'])!.value;
+      const email = this.registerForm.get(['email'])!.value;
+      this.registerService
+        .save({ login, email, password, langKey: this.translateService.currentLang })
+        .subscribe({ next: () => (this.success = true), error: response => this.processError(response) });
+    }
+  }
+
+  private processError(response: HttpErrorResponse): void {
+    if (response.status === 400 && response.error.type === LOGIN_ALREADY_USED_TYPE) {
+      this.errorUserExists = true;
+    } else if (response.status === 400 && response.error.type === EMAIL_ALREADY_USED_TYPE) {
+      this.errorEmailExists = true;
+    } else {
+      this.error = true;
+    }
   }
 }
