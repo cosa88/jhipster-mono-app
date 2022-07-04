@@ -1,4 +1,4 @@
-# jhipsterMonoApp
+# myApp
 
 This application was generated using JHipster 7.8.1, you can find documentation and help at [https://www.jhipster.tech](https://www.jhipster.tech).
 
@@ -34,13 +34,13 @@ You will only need to run this command when dependencies change in [package.json
 npm install
 ```
 
-We use npm scripts and [Webpack][] as our build system.
+We use npm scripts and [Angular CLI][] with [Webpack][] as our build system.
 
 Run the following commands in two separate terminals to create a blissful development experience where your browser
 auto-refreshes when files change on your hard drive.
 
 ```
-./gradlew -x webapp
+./mvnw
 npm start
 ```
 
@@ -54,19 +54,11 @@ The `npm run` command will list all of the scripts available to run for this pro
 
 JHipster ships with PWA (Progressive Web App) support, and it's turned off by default. One of the main components of a PWA is a service worker.
 
-The service worker initialization code is commented out by default. To enable it, uncomment the following code in `src/main/webapp/index.html`:
+The service worker initialization code is disabled by default. To enable it, uncomment the following code in `src/main/webapp/app/app.module.ts`:
 
-```html
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').then(function () {
-      console.log('Service Worker Registered');
-    });
-  }
-</script>
+```typescript
+ServiceWorkerModule.register('ngsw-worker.js', { enabled: false }),
 ```
-
-Note: [Workbox](https://developers.google.com/web/tools/workbox/) powers JHipster's service worker. It dynamically generates the `service-worker.js` file.
 
 ### Managing dependencies
 
@@ -83,9 +75,39 @@ npm install --save-dev --save-exact @types/leaflet
 ```
 
 Then you would import the JS and CSS files specified in library's installation instructions so that [Webpack][] knows about them:
+Edit [src/main/webapp/app/app.module.ts](src/main/webapp/app/app.module.ts) file:
+
+```
+import 'leaflet/dist/leaflet.js';
+```
+
+Edit [src/main/webapp/content/scss/vendor.scss](src/main/webapp/content/scss/vendor.scss) file:
+
+```
+@import '~leaflet/dist/leaflet.css';
+```
+
 Note: There are still a few other things remaining to do for Leaflet that we won't detail here.
 
 For further instructions on how to develop with JHipster, have a look at [Using JHipster in development][].
+
+### Using Angular CLI
+
+You can also use [Angular CLI][] to generate some custom client code.
+
+For example, the following command:
+
+```
+ng generate component my-component
+```
+
+will generate few files:
+
+```
+create src/main/webapp/app/my-component/my-component.component.html
+create src/main/webapp/app/my-component/my-component.component.ts
+update src/main/webapp/app/app.module.ts
+```
 
 ### JHipster Control Center
 
@@ -99,17 +121,17 @@ docker-compose -f src/main/docker/jhipster-control-center.yml up
 
 ### Packaging as jar
 
-To build the final jar and optimize the jhipsterMonoApp application for production, run:
+To build the final jar and optimize the myApp application for production, run:
 
 ```
-./gradlew -Pprod clean bootJar
+./mvnw -Pprod clean verify
 ```
 
 This will concatenate and minify the client CSS and JavaScript files. It will also modify `index.html` so it references these new files.
 To ensure everything worked, run:
 
 ```
-java -jar build/libs/*.jar
+java -jar target/*.jar
 ```
 
 Then navigate to [http://localhost:8080](http://localhost:8080) in your browser.
@@ -121,7 +143,7 @@ Refer to [Using JHipster in production][] for more details.
 To package your application as a war in order to deploy it to an application server, run:
 
 ```
-./gradlew -Pprod -Pwar clean bootWar
+./mvnw -Pprod,war clean verify
 ```
 
 ## Testing
@@ -129,7 +151,7 @@ To package your application as a war in order to deploy it to an application ser
 To launch your application's tests, run:
 
 ```
-./gradlew test integrationTest jacocoTestReport
+./mvnw verify
 ```
 
 ### Client tests
@@ -152,12 +174,18 @@ docker-compose -f src/main/docker/sonar.yml up -d
 
 Note: we have turned off authentication in [src/main/docker/sonar.yml](src/main/docker/sonar.yml) for out of the box experience while trying out SonarQube, for real use cases turn it back on.
 
-You can run a Sonar analysis with using the [sonar-scanner](https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner) or by using the gradle plugin.
+You can run a Sonar analysis with using the [sonar-scanner](https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner) or by using the maven plugin.
 
 Then, run a Sonar analysis:
 
 ```
-./gradlew -Pprod clean check jacocoTestReport sonarqube
+./mvnw -Pprod clean verify sonar:sonar
+```
+
+If you need to re-run the Sonar phase, please be sure to specify at least the `initialize` phase since Sonar properties are loaded from the sonar-project.properties file.
+
+```
+./mvnw initialize sonar:sonar
 ```
 
 For more information, refer to the [Code quality page][].
@@ -182,7 +210,7 @@ You can also fully dockerize your application and all the services that it depen
 To achieve this, first build a docker image of your app by running:
 
 ```
-./gradlew bootJar -Pprod jibDockerBuild
+./mvnw -Pprod verify jib:dockerBuild
 ```
 
 Then run:
@@ -212,3 +240,4 @@ To configure CI for your project, run the ci-cd sub-generator (`jhipster ci-cd`)
 [jest]: https://facebook.github.io/jest/
 [leaflet]: https://leafletjs.com/
 [definitelytyped]: https://definitelytyped.org/
+[angular cli]: https://cli.angular.io/
